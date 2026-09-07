@@ -16,11 +16,11 @@ export function SignInPage() {
         <div className="signin-features">
           <div className="signin-feature">
             <div className="signin-feature-icon">🤖</div>
-            <span>AI controls the UI — say "send an email to X" and watch it happen</span>
+            <span>AI controls the UI — say &quot;send an email to X&quot; and watch it happen</span>
           </div>
           <div className="signin-feature">
             <div className="signin-feature-icon">🔍</div>
-            <span>Natural language search — "show emails from last week"</span>
+            <span>Natural language search — &quot;show emails from last week&quot;</span>
           </div>
           <div className="signin-feature">
             <div className="signin-feature-icon">⚡</div>

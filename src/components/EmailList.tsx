@@ -3,7 +3,7 @@ import { useMail } from '@/context/MailContext'
 import { Email } from '@/types'
 import { useState } from 'react'
 
-const avatarColors = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6']
+const avatarColors = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6']
 
 function getColor(name: string): string {
   let hash = 0
@@ -20,16 +20,16 @@ function getInitials(name: string): string {
 function SkeletonList() {
   return (
     <div className="stagger-children">
-      {Array.from({ length: 8 }).map((_, i) => (
+      {Array.from({ length: 7 }).map((_, i) => (
         <div key={i} className="skeleton-email">
           <div className="skeleton skeleton-avatar" />
           <div className="skeleton-content">
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <div className="skeleton skeleton-line medium" />
-              <div className="skeleton skeleton-line short" style={{ width: 60 }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+              <div className="skeleton skeleton-line w-60" />
+              <div className="skeleton skeleton-line w-30" />
             </div>
-            <div className="skeleton skeleton-line long" />
-            <div className="skeleton skeleton-line medium" />
+            <div className="skeleton skeleton-line w-80" />
+            <div className="skeleton skeleton-line w-40" />
           </div>
         </div>
       ))}
@@ -48,7 +48,6 @@ export function EmailList({ emails: propEmails, label }: EmailListProps) {
 
   const emails = propEmails || state.emails
   const displayLabel = label || (state.view === 'sent' ? 'Sent' : 'Inbox')
-
   const filtered = filter === 'unread' ? emails.filter(e => !e.isRead) : emails
 
   const handleClick = async (email: Email) => {
@@ -67,29 +66,27 @@ export function EmailList({ emails: propEmails, label }: EmailListProps) {
     <>
       <div className="email-list-header">
         <h2>{displayLabel}</h2>
-        <span className="count">{filtered.length}</span>
+        <span className="count-badge">{filtered.length}</span>
       </div>
 
       <div className="filter-bar">
-        <button
-          className={`filter-chip ${filter === 'all' ? 'active' : ''}`}
-          onClick={() => setFilter('all')}
-        >All</button>
-        <button
-          className={`filter-chip ${filter === 'unread' ? 'active' : ''}`}
-          onClick={() => setFilter('unread')}
-        >Unread</button>
+        <button className={`filter-chip ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>
+          All
+        </button>
+        <button className={`filter-chip ${filter === 'unread' ? 'active' : ''}`} onClick={() => setFilter('unread')}>
+          🔵 Unread
+        </button>
       </div>
 
       <div className="email-list" id="email-list">
         {state.isLoading ? (
           <SkeletonList />
         ) : filtered.length === 0 ? (
-          <div className="empty-state" style={{ paddingTop: 60 }}>
+          <div className="empty-state" style={{ paddingTop: 40 }}>
             <div className="empty-state-icon">🔍</div>
             <div className="empty-state-title">No emails found</div>
             <div className="empty-state-desc">
-              {state.filter.query ? 'Try a different search term' : 'Your inbox is empty'}
+              {state.filter.query ? 'Try a different search' : 'Your inbox is empty'}
             </div>
           </div>
         ) : (
@@ -101,10 +98,7 @@ export function EmailList({ emails: propEmails, label }: EmailListProps) {
                 className={`email-item ${!email.isRead ? 'unread' : ''} ${state.selectedEmail?.id === email.id ? 'active' : ''}`}
                 onClick={() => handleClick(email)}
               >
-                <div
-                  className="email-avatar"
-                  style={{ background: getColor(email.fromName) }}
-                >
+                <div className="email-avatar" style={{ background: getColor(email.fromName) }}>
                   {getInitials(email.fromName)}
                 </div>
                 <div className="email-content">

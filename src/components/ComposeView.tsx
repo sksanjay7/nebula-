@@ -12,47 +12,44 @@ export function ComposeView() {
 
   const handleSend = async () => {
     if (!compose.to.trim()) { toast.error('Please enter a recipient'); return }
-    if (!compose.subject.trim()) { toast.error('Please enter a subject'); return }
-
+    if (!compose.subject.trim()) { toast.error('Please add a subject'); return }
     setSending(true)
     try {
       const res = await fetch('/api/gmail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'send',
-          to: compose.to,
-          subject: compose.subject,
-          emailBody: compose.body,
-        }),
+        body: JSON.stringify({ action: 'send', to: compose.to, subject: compose.subject, emailBody: compose.body }),
       })
-
       if (res.ok) {
         toast.success('Email sent! 🎉')
-        resetCompose()
-        setView('inbox')
+        resetCompose(); setView('inbox')
         setTimeout(() => refresh(), 1500)
       } else {
         const err = await res.json()
-        toast.error(err.error || 'Failed to send email')
+        toast.error(err.error || 'Failed to send')
       }
-    } catch {
-      toast.error('Network error — check your connection')
-    } finally {
-      setSending(false)
-    }
-  }
-
-  const handleDiscard = () => {
-    resetCompose()
-    setView('inbox')
+    } catch { toast.error('Network error') }
+    finally { setSending(false) }
   }
 
   return (
     <div className="compose-view">
-      <div className="compose-title">✏️ New Message</div>
+      {/* Header */}
+      <div className="compose-header">
+        <div className="compose-title">✏️ New Message</div>
+        <button
+          id="discard-email-btn"
+          className="btn btn-ghost"
+          onClick={() => { resetCompose(); setView('inbox') }}
+          style={{ marginLeft: 'auto' }}
+        >
+          ✕ Discard
+        </button>
+      </div>
 
+      {/* Form card */}
       <div className="compose-form">
+        {/* To */}
         <div className="compose-field">
           <label htmlFor="compose-to">To</label>
           <input
@@ -62,33 +59,37 @@ export function ComposeView() {
             value={compose.to}
             onChange={e => updateCompose({ to: e.target.value })}
           />
+          <button
+            onClick={() => setShowCcBcc(!showCcBcc)}
+            style={{
+              fontSize: '0.72rem', color: 'var(--text-secondary)', padding: '14px 16px',
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              fontWeight: 600, flexShrink: 0, opacity: 0.7,
+            }}
+          >
+            {showCcBcc ? 'Hide' : 'Cc/Bcc'}
+          </button>
         </div>
 
+        {/* CC */}
         {showCcBcc && (
-          <>
-            <div className="compose-field">
-              <label htmlFor="compose-cc">Cc</label>
-              <input
-                id="compose-cc"
-                type="email"
-                placeholder="cc@example.com"
-                value={compose.cc || ''}
-                onChange={e => updateCompose({ cc: e.target.value })}
-              />
-            </div>
-            <div className="compose-field">
-              <label htmlFor="compose-bcc">Bcc</label>
-              <input
-                id="compose-bcc"
-                type="email"
-                placeholder="bcc@example.com"
-                value={compose.bcc || ''}
-                onChange={e => updateCompose({ bcc: e.target.value })}
-              />
-            </div>
-          </>
+          <div className="compose-field" style={{ animation: 'staggerFadeUp 0.25s var(--t-spring)' }}>
+            <label htmlFor="compose-cc">Cc</label>
+            <input id="compose-cc" type="email" placeholder="cc@example.com"
+              value={compose.cc || ''} onChange={e => updateCompose({ cc: e.target.value })} />
+          </div>
         )}
 
+        {/* BCC */}
+        {showCcBcc && (
+          <div className="compose-field" style={{ animation: 'staggerFadeUp 0.3s var(--t-spring)' }}>
+            <label htmlFor="compose-bcc">Bcc</label>
+            <input id="compose-bcc" type="email" placeholder="bcc@example.com"
+              value={compose.bcc || ''} onChange={e => updateCompose({ bcc: e.target.value })} />
+          </div>
+        )}
+
+        {/* Subject */}
         <div className="compose-field">
           <label htmlFor="compose-subject">Subject</label>
           <input
@@ -100,8 +101,9 @@ export function ComposeView() {
           />
         </div>
 
+        {/* Body */}
         <div className="compose-field">
-          <label htmlFor="compose-body">Message</label>
+          <label htmlFor="compose-body" style={{ paddingTop: 16 }}>Message</label>
           <textarea
             id="compose-body"
             placeholder="Write your message..."
@@ -111,6 +113,7 @@ export function ComposeView() {
           />
         </div>
 
+        {/* Toolbar */}
         <div className="compose-toolbar">
           <button
             id="send-email-btn"
@@ -119,28 +122,14 @@ export function ComposeView() {
             disabled={sending}
           >
             {sending ? (
-              <>
-                <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⟳</span>
-                Sending...
-              </>
+              <><span className="spin">⟳</span> Sending...</>
             ) : '✈️ Send'}
           </button>
 
-          <button
-            className="btn btn-secondary"
-            onClick={() => setShowCcBcc(!showCcBcc)}
-          >
-            {showCcBcc ? 'Hide Cc/Bcc' : 'Cc / Bcc'}
-          </button>
-
-          <button
-            id="discard-email-btn"
-            className="btn btn-danger"
-            onClick={handleDiscard}
-            style={{ marginLeft: 'auto' }}
-          >
-            🗑️ Discard
-          </button>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <button className="btn-icon" title="Attach file">📎</button>
+            <button className="btn-icon" title="Emoji">😊</button>
+          </div>
         </div>
       </div>
     </div>

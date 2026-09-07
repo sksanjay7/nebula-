@@ -3,19 +3,18 @@ import { useMail } from '@/context/MailContext'
 import { MailView } from '@/types'
 
 const navItems = [
-  { id: 'inbox', icon: '📥', label: 'Inbox', showBadge: true },
-  { id: 'sent', icon: '📤', label: 'Sent' },
+  { id: 'inbox',   icon: '📥', label: 'Inbox',   showBadge: true },
+  { id: 'sent',    icon: '📤', label: 'Sent' },
   { id: 'starred', icon: '⭐', label: 'Starred' },
-  { id: 'drafts', icon: '📝', label: 'Drafts' },
+  { id: 'drafts',  icon: '📝', label: 'Drafts' },
 ]
 
-const colors = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6']
-
-function getAvatarColor(name: string): string {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  return colors[Math.abs(hash) % colors.length]
-}
+const labels = [
+  { name: 'Work',     color: '#6366f1' },
+  { name: 'Personal', color: '#10b981' },
+  { name: 'Finance',  color: '#f59e0b' },
+  { name: 'Travel',   color: '#06b6d4' },
+]
 
 export function Sidebar() {
   const { state, setView, resetCompose } = useMail()
@@ -36,52 +35,80 @@ export function Sidebar() {
         className="compose-btn"
         onClick={handleCompose}
       >
-        <span>✏️</span>
+        <span style={{ fontSize: 16 }}>✏️</span>
         Compose
       </button>
 
-      <div className="divider" />
-
+      <div className="nav-divider" />
       <div className="nav-label">Mailboxes</div>
 
       {navItems.map(item => (
         <button
           key={item.id}
           id={`nav-${item.id}`}
-          className={`nav-item ${state.view === item.id || (state.view === 'detail' && item.id === 'inbox') ? 'active' : ''}`}
+          className={`nav-item ${
+            state.view === item.id ||
+            (state.view === 'detail' && item.id === 'inbox')
+              ? 'active'
+              : ''
+          }`}
           onClick={() => handleNav(item.id)}
         >
           <span className="nav-icon">{item.icon}</span>
           {item.label}
           {item.showBadge && state.totalUnread > 0 && (
-            <span className="nav-badge">{state.totalUnread > 99 ? '99+' : state.totalUnread}</span>
+            <span className="nav-badge">
+              {state.totalUnread > 99 ? '99+' : state.totalUnread}
+            </span>
           )}
         </button>
       ))}
 
-      <div className="divider" />
+      <div className="nav-divider" />
       <div className="nav-label">Labels</div>
 
-      {['Work', 'Personal', 'Finance', 'Travel'].map(label => (
-        <button
-          key={label}
-          className="nav-item"
-          onClick={() => {/* TODO: filter by label */}}
-        >
+      {labels.map(label => (
+        <button key={label.name} className="nav-item">
           <span
             className="nav-icon"
             style={{
-              width: 10,
-              height: 10,
+              width: 9,
+              height: 9,
               borderRadius: '50%',
-              background: getAvatarColor(label),
+              background: label.color,
               display: 'inline-block',
-              marginRight: 2,
+              boxShadow: `0 0 8px ${label.color}80`,
+              flexShrink: 0,
             }}
           />
-          {label}
+          {label.name}
         </button>
       ))}
+
+      {/* Storage indicator at bottom */}
+      <div style={{ marginTop: 'auto', padding: '8px 8px 4px' }}>
+        <div style={{
+          fontSize: '0.7rem', color: 'var(--text-secondary)',
+          marginBottom: 5, opacity: 0.7,
+        }}>
+          Storage
+        </div>
+        <div style={{
+          height: 4, background: 'var(--border-dim)',
+          borderRadius: 'var(--r-full)', overflow: 'hidden',
+        }}>
+          <div style={{
+            height: '100%', width: '34%',
+            background: 'var(--grad-primary)',
+            borderRadius: 'var(--r-full)',
+            boxShadow: '0 0 8px var(--glow-primary)',
+            transition: 'width 1s ease',
+          }} />
+        </div>
+        <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: 3, opacity: 0.6 }}>
+          5.1 GB of 15 GB
+        </div>
+      </div>
     </>
   )
 }

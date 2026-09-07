@@ -1,19 +1,17 @@
-import { GoogleGenerativeAI, FunctionDeclaration, SchemaType } from '@google/generative-ai'
+import { GoogleGenAI } from '@google/genai'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
 
 // ─── UI FUNCTION DECLARATIONS ─────────────────────────────────────────────────
-// These are the functions the AI can call to control the UI
-
-const uiFunctions: FunctionDeclaration[] = [
+const uiFunctions = [
   {
     name: 'navigate_to',
     description: 'Navigate to a different view in the mail app (inbox, sent, compose, etc.)',
     parameters: {
-      type: SchemaType.OBJECT,
+      type: 'object',
       properties: {
         view: {
-          type: SchemaType.STRING,
+          type: 'string',
           enum: ['inbox', 'sent', 'drafts', 'starred', 'compose'],
           description: 'The view to navigate to',
         },
@@ -23,72 +21,72 @@ const uiFunctions: FunctionDeclaration[] = [
   },
   {
     name: 'compose_email',
-    description: 'Open the compose view and optionally pre-fill To, Subject, and Body fields. Fields are animated visibly as they fill.',
+    description: 'Open the compose view and optionally pre-fill To, Subject, and Body fields.',
     parameters: {
-      type: SchemaType.OBJECT,
+      type: 'object',
       properties: {
-        to: { type: SchemaType.STRING, description: 'Recipient email address' },
-        subject: { type: SchemaType.STRING, description: 'Email subject line' },
-        body: { type: SchemaType.STRING, description: 'Email body text' },
+        to:      { type: 'string', description: 'Recipient email address' },
+        subject: { type: 'string', description: 'Email subject line' },
+        body:    { type: 'string', description: 'Email body text' },
       },
     },
   },
   {
     name: 'search_emails',
-    description: 'Search and filter emails in the inbox by query, sender, date range, or read status. Updates the email list visibly.',
+    description: 'Search and filter emails in the inbox by query, sender, date range, or read status.',
     parameters: {
-      type: SchemaType.OBJECT,
+      type: 'object',
       properties: {
-        query: { type: SchemaType.STRING, description: 'Search query (keyword, subject, etc.)' },
-        sender: { type: SchemaType.STRING, description: 'Filter by sender name or email' },
-        dateFrom: { type: SchemaType.STRING, description: 'Start date filter (ISO format or relative like "7 days ago")' },
-        dateTo: { type: SchemaType.STRING, description: 'End date filter' },
-        unreadOnly: { type: SchemaType.BOOLEAN, description: 'Show only unread emails' },
+        query:      { type: 'string',  description: 'Search query (keyword, subject, etc.)' },
+        sender:     { type: 'string',  description: 'Filter by sender name or email' },
+        dateFrom:   { type: 'string',  description: 'Start date filter (e.g. "7 days ago", "last week")' },
+        dateTo:     { type: 'string',  description: 'End date filter' },
+        unreadOnly: { type: 'boolean', description: 'Show only unread emails' },
       },
     },
   },
   {
     name: 'open_email',
-    description: 'Open and display a specific email by its ID. Shows the full email content.',
+    description: 'Open and display a specific email by its ID.',
     parameters: {
-      type: SchemaType.OBJECT,
+      type: 'object',
       properties: {
-        emailId: { type: SchemaType.STRING, description: 'The ID of the email to open' },
+        emailId: { type: 'string', description: 'The ID of the email to open' },
       },
       required: ['emailId'],
     },
   },
   {
     name: 'send_email',
-    description: 'Send an email. Always asks for user confirmation before sending (human-in-the-loop).',
+    description: 'Send an email. Always asks for user confirmation before sending.',
     parameters: {
-      type: SchemaType.OBJECT,
+      type: 'object',
       properties: {
-        to: { type: SchemaType.STRING, description: 'Recipient email address' },
-        subject: { type: SchemaType.STRING, description: 'Email subject' },
-        body: { type: SchemaType.STRING, description: 'Email body text' },
+        to:      { type: 'string', description: 'Recipient email address' },
+        subject: { type: 'string', description: 'Email subject' },
+        body:    { type: 'string', description: 'Email body text' },
       },
       required: ['to', 'subject', 'body'],
     },
   },
   {
     name: 'reply_to_current',
-    description: 'Reply to the currently open email. Fills in reply fields automatically.',
+    description: 'Reply to the currently open email.',
     parameters: {
-      type: SchemaType.OBJECT,
+      type: 'object',
       properties: {
-        body: { type: SchemaType.STRING, description: 'Reply text' },
+        body: { type: 'string', description: 'Reply text' },
       },
     },
   },
   {
     name: 'get_email_info',
-    description: 'Get information about emails currently visible or the open email. Use to answer questions about emails.',
+    description: 'Get information about emails currently visible or the open email.',
     parameters: {
-      type: SchemaType.OBJECT,
+      type: 'object',
       properties: {
         infoType: {
-          type: SchemaType.STRING,
+          type: 'string',
           enum: ['list_visible', 'current_open', 'count_unread'],
           description: 'What information to retrieve',
         },
@@ -99,34 +97,26 @@ const uiFunctions: FunctionDeclaration[] = [
 ]
 
 // ─── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
-
-export const SYSTEM_PROMPT = `You are Aether, an intelligent AI email assistant embedded in a beautiful mail client app. You can control the UI by calling functions — you are NOT just a chatbot.
+const SYSTEM_PROMPT = `You are Aether, an intelligent AI email assistant embedded in a beautiful mail client app. You can control the UI by calling functions.
 
 KEY BEHAVIORS:
-1. When a user says "send an email to X with subject Y", call compose_email to visibly fill the form, then send_email to trigger confirmation.
-2. When a user says "show me emails from last week", call search_emails with appropriate date filters.
-3. When a user says "open the latest email from X", call get_email_info first, then open_email with the ID.
-4. When a user says "go to inbox/sent/compose", call navigate_to.
-5. ALWAYS ask for confirmation before sending. Never send without explicit user approval.
-6. Be concise and action-oriented. Don't just describe what you'll do — DO it by calling functions.
+1. When user asks to "send an email to X", call compose_email to fill the form.
+2. When user asks to "show emails from last week", call search_emails with date filters.
+3. When user asks to "show unread emails", call search_emails with unreadOnly: true.
+4. When user asks to "go to inbox/sent/compose", call navigate_to.
+5. ALWAYS confirm before sending. Never send without explicit user approval.
+6. Be concise and action-oriented — call functions, don't just describe.
 7. Be context-aware: you know the current view and open email.
-8. You can parse natural language dates: "last week", "yesterday", "10 days ago", etc.
 
-PERSONALITY:
-- Friendly, efficient, and smart
-- Proactively helps with email tasks
-- Confirms important actions (sending, deleting)
-- Uses the user's name when known
-- Keeps responses brief but helpful`
+PERSONALITY: Friendly, efficient, smart. Keep responses brief.`
 
-// ─── MAIN AI FUNCTION ─────────────────────────────────────────────────────────
-
+// ─── TYPES ─────────────────────────────────────────────────────────────────────
 export interface AIContext {
   currentView: string
   openEmailId?: string
   openEmailSubject?: string
   openEmailFrom?: string
-  visibleEmails?: Array<{ id: string; from: string; subject: string; date: string; isRead: boolean }>
+  visibleEmails?: Array<{ id: string; from: string; subject: string; date?: string; isRead: boolean }>
   userEmail?: string
 }
 
@@ -134,6 +124,15 @@ export interface ChatMessage {
   role: 'user' | 'model'
   parts: Array<{ text: string }>
 }
+
+// ─── MODELS TO TRY IN ORDER ───────────────────────────────────────────────────
+const MODEL_PRIORITY = [
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-1.5-flash-8b',
+  'gemini-1.5-flash-002',
+]
 
 export async function runAIChat(
   userMessage: string,
@@ -143,31 +142,75 @@ export async function runAIChat(
   text: string
   functionCalls: Array<{ name: string; args: Record<string, unknown> }>
 }> {
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
-    systemInstruction: SYSTEM_PROMPT + `\n\nCURRENT CONTEXT:\n- View: ${context.currentView}\n- User: ${context.userEmail || 'unknown'}\n- Open email: ${context.openEmailSubject ? `"${context.openEmailSubject}" from ${context.openEmailFrom}` : 'none'}\n- Visible emails: ${context.visibleEmails?.length || 0} emails shown`,
-    tools: [{ functionDeclarations: uiFunctions }],
-    generationConfig: { maxOutputTokens: 1024 },
-  })
+  const systemInstruction = SYSTEM_PROMPT +
+    `\n\nCURRENT CONTEXT:\n- View: ${context.currentView}\n- User: ${context.userEmail || 'unknown'}\n- Open email: ${context.openEmailSubject ? `"${context.openEmailSubject}" from ${context.openEmailFrom}` : 'none'}\n- Visible emails (${context.visibleEmails?.length || 0}): ${JSON.stringify(context.visibleEmails?.slice(0, 5) || [])}`
 
-  const chat = model.startChat({ history })
-  const result = await chat.sendMessage(userMessage)
-  const response = result.response
+  let lastError: Error | null = null
 
-  const functionCalls: Array<{ name: string; args: Record<string, unknown> }> = []
-  for (const candidate of response.candidates || []) {
-    for (const part of candidate.content?.parts || []) {
-      if (part.functionCall) {
-        functionCalls.push({
-          name: part.functionCall.name,
-          args: part.functionCall.args as Record<string, unknown>,
-        })
+  for (const modelName of MODEL_PRIORITY) {
+    try {
+      // Build contents array from history + new message
+      const contents = [
+        ...history.map(h => ({
+          role: h.role,
+          parts: h.parts,
+        })),
+        {
+          role: 'user' as const,
+          parts: [{ text: userMessage }],
+        },
+      ]
+
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents,
+        config: {
+          systemInstruction,
+          tools: [{ functionDeclarations: uiFunctions }],
+          maxOutputTokens: 1024,
+          temperature: 0.7,
+        },
+      })
+
+      // Extract function calls and text
+      const functionCalls: Array<{ name: string; args: Record<string, unknown> }> = []
+      let text = ''
+
+      const candidates = response.candidates || []
+      for (const candidate of candidates) {
+        for (const part of candidate.content?.parts || []) {
+          if (part.functionCall) {
+            functionCalls.push({
+              name: part.functionCall.name || '',
+              args: (part.functionCall.args || {}) as Record<string, unknown>,
+            })
+          } else if (part.text) {
+            text += part.text
+          }
+        }
       }
+
+      // Fallback: try response.text
+      if (!text) {
+        try { text = response.text || '' } catch {}
+      }
+
+      console.log(`✅ Gemini model used: ${modelName}`)
+      return { text, functionCalls }
+
+    } catch (err: any) {
+      lastError = err
+      const msg = err?.message || ''
+      const isModelError = msg.includes('not found') || msg.includes('404') ||
+        msg.includes('not supported') || msg.includes('INVALID_ARGUMENT')
+
+      if (!isModelError) {
+        console.error(`❌ Gemini fatal error with ${modelName}:`, msg)
+        throw err
+      }
+      console.warn(`⚠️ Model ${modelName} unavailable, trying next...`)
     }
   }
 
-  return {
-    text: response.text() || '',
-    functionCalls,
-  }
+  throw lastError || new Error('All Gemini models failed')
 }

@@ -144,10 +144,10 @@ export function MailApp() {
   useEffect(() => {
     if (session?.accessToken) {
       fetchInbox()
-      // Real-time polling every 30s
+      // Poll every 2 minutes to avoid Gmail rate limits
       refreshIntervalRef.current = setInterval(() => {
         if (state.view === 'inbox') fetchInbox()
-      }, 30000)
+      }, 120000)
     }
     return () => {
       if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current)
